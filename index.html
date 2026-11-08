@@ -1,0 +1,162 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>终末地 · 工业配平器 | Endfield Ratio Planner</title>
+<meta name="description" content="明日方舟：终末地 工业系统配平计算器。基于终末地 Wiki（fz.wiki）数据，自动拆解生产链，计算设备台数、耗电与原料需求。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 27 9.5v13L16 29 5 22.5v-13z' fill='none' stroke='%23f2a63b' stroke-width='2'/%3E%3Cpath d='M16 10v12M11 16h10' stroke='%23f2a63b' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#calc">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M16 3 27 9.5v13L16 29 5 22.5v-13z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M16 9.5v13M9.8 16h12.4" stroke="currentColor" stroke-width="1.6"/>
+    </svg>
+    <span class="brand-txt">
+      <strong>终末地 · 工业配平器</strong>
+      <small>ENDFIELD RATIO PLANNER</small>
+    </span>
+  </a>
+  <nav class="tabs" id="tabs">
+    <a href="#calc" class="tab" data-tab="calc">配平计算</a>
+    <a href="#items" class="tab" data-tab="items">物品图鉴</a>
+    <a href="#recipes" class="tab" data-tab="recipes">配方总表</a>
+    <a href="#buildings" class="tab" data-tab="buildings">生产设备</a>
+  </nav>
+  <div class="top-meta">
+    <span id="dataStamp" class="stamp">载入数据…</span>
+    <a class="src" href="https://www.fz.wiki/" target="_blank" rel="noopener">数据源 · fz.wiki ↗</a>
+  </div>
+</header>
+
+<main>
+  <!-- ============ 配平计算 ============ -->
+  <section class="view" id="view-calc">
+    <div class="panel planner">
+      <div class="planner-row">
+        <label class="field grow">
+          <span class="label">目标产物 · TARGET</span>
+          <div class="combo" id="combo">
+            <span class="combo-icon" id="comboIcon"></span>
+            <input id="targetInput" type="text" autocomplete="off" spellcheck="false" placeholder="搜索产物，例如：高容谷地电池 / 分离芯 / 钢块">
+            <span class="combo-caret">▾</span>
+            <div class="combo-list" id="comboList" hidden></div>
+          </div>
+        </label>
+        <label class="field rate">
+          <span class="label">目标产能 / 分钟</span>
+          <input id="rateInput" type="number" min="0.1" step="1" value="60" inputmode="decimal">
+        </label>
+        <button class="btn primary" id="calcBtn">生成配平方案</button>
+      </div>
+      <div class="planner-foot">
+        <div class="chips" id="quickChips"></div>
+        <div class="meta" id="planMeta">—</div>
+      </div>
+    </div>
+
+    <div class="stats" id="summary"></div>
+
+    <div class="results-grid">
+      <div class="panel chain-panel">
+        <div class="panel-head">
+          <h2><i class="tick"></i>生产链拆解</h2>
+          <div class="head-tools">
+            <button class="btn ghost sm" id="copyPlanBtn">复制方案</button>
+            <button class="btn ghost sm" id="shareBtn">分享链接</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="chainTable"></div>
+        <div class="panel-note" id="chainNote"></div>
+      </div>
+
+      <div class="panel side-panel" id="sidePanel"></div>
+    </div>
+  </section>
+
+  <!-- ============ 物品图鉴 ============ -->
+  <section class="view" id="view-items" hidden>
+    <div class="panel toolbar">
+      <div class="field grow">
+        <span class="label">检索物品</span>
+        <input id="itemSearch" type="search" placeholder="输入物品名，例如：电池、瓶、零件…">
+      </div>
+      <div class="seg" id="itemFilter">
+        <button class="segbtn active" data-f="all">全部</button>
+        <button class="segbtn" data-f="mat">工业产物</button>
+        <button class="segbtn" data-f="tact">战术物品</button>
+        <button class="segbtn" data-f="field">野外可采集</button>
+      </div>
+      <div class="toolbar-count" id="itemCount">—</div>
+    </div>
+    <div class="items-layout">
+      <div class="items-grid" id="itemsGrid"></div>
+      <div class="panel item-detail" id="itemDetail"><div class="empty">选择左侧物品查看获取途径与生产流程</div></div>
+    </div>
+    <section class="panel flow-panel" id="itemFlow" hidden>
+      <div class="panel-head">
+        <h3>自动化生产流程</h3>
+        <div class="flow-tools">
+          <span class="flow-hint" id="flowHint" hidden>↔ 左右滑动查看完整流程</span>
+          <span class="flow-meta" id="flowMeta">—</span>
+          <label class="flow-rate">目标 <input id="flowRate" type="number" min="1" step="1" value="60"> /min</label>
+        </div>
+      </div>
+      <div class="flow-wrap" id="flowWrap"></div>
+      <div class="flow-legend">
+        <span><i class="lg solid"></i>物料流</span>
+        <span><i class="lg dash"></i>循环回流</span>
+        <span><i class="lg boxraw"></i>外部原料</span>
+        <span><i class="lg loop"></i>循环链</span>
+        <span class="fl-note">边标数字 = 物料流量 /min</span>
+      </div>
+    </section>
+  </section>
+
+  <!-- ============ 配方总表 ============ -->
+  <section class="view" id="view-recipes" hidden>
+    <div class="panel toolbar">
+      <div class="field grow">
+        <span class="label">检索配方</span>
+        <input id="recipeSearch" type="search" placeholder="按产物或原料名检索…">
+      </div>
+      <label class="field">
+        <span class="label">生产设备</span>
+        <select id="recipeMachine"></select>
+      </label>
+      <div class="toolbar-count" id="recipeCount">—</div>
+    </div>
+    <div class="panel table-panel">
+      <div class="table-wrap" id="recipeTable"></div>
+    </div>
+  </section>
+
+  <!-- ============ 生产设备 ============ -->
+  <section class="view" id="view-buildings" hidden>
+    <div class="panel toolbar">
+      <div class="field grow">
+        <span class="label">检索设备</span>
+        <input id="bldSearch" type="search" placeholder="输入设备名，例如：精炼炉、封装机、反应池…">
+      </div>
+      <div class="seg" id="bldFilter">
+        <button class="segbtn active" data-f="prod">生产设备</button>
+        <button class="segbtn" data-f="all">全部建筑</button>
+      </div>
+      <div class="toolbar-count" id="bldCount">—</div>
+    </div>
+    <div class="bld-grid" id="bldGrid"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>数据取自 <a href="https://www.fz.wiki/" target="_blank" rel="noopener">终末地 Wiki（fz.wiki）</a> 的工厂建筑与配方条目，由页面自动同步生成。本站为非官方玩家工具，与鹰角网络无关。</p>
+  <p class="dim">配平算法：按配方逐级反推物料需求；台数向上取整；副产物单独列出，未计入抵扣。</p>
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
